@@ -565,7 +565,7 @@
             
             // Official redeem page URLs for each game
             const redeemUrls = {
-                'wuthering-waves': 'https://wutheringwaves.kurogames.com/en/main/gift',
+                'wuthering-waves': null, // 명조는 인게임에서만 입력 가능
                 'honkai-star-rail': 'https://hsr.hoyoverse.com/gift',
                 'zenless-zone-zero': 'https://zenless.hoyoverse.com/redemption',
                 'genshin-impact': 'https://genshin.hoyoverse.com/gift'
@@ -592,13 +592,17 @@
                         `;
                         this.classList.add('copied');
                         
-                        // Open official redeem page after short delay
-                        setTimeout(() => {
-                            const redeemUrl = redeemUrls[gameType];
-                            if (redeemUrl) {
-                                window.open(redeemUrl, '_blank');
-                            }
-                        }, 500);
+                        // For HoYoverse games, open redeem page with code pre-filled
+                        if (gameType !== 'wuthering-waves') {
+                            setTimeout(() => {
+                                const redeemUrl = redeemUrls[gameType];
+                                if (redeemUrl) {
+                                    // Open URL with code parameter for auto-fill
+                                    const urlWithCode = `${redeemUrl}?code=${encodeURIComponent(code)}`;
+                                    window.open(urlWithCode, '_blank');
+                                }
+                            }, 500);
+                        }
                         
                         // Revert button after 2 seconds
                         setTimeout(() => {
@@ -624,13 +628,17 @@
                         `;
                         this.classList.add('copied');
                         
-                        // Open official redeem page after short delay
-                        setTimeout(() => {
-                            const redeemUrl = redeemUrls[gameType];
-                            if (redeemUrl) {
-                                window.open(redeemUrl, '_blank');
-                            }
-                        }, 500);
+                        // For HoYoverse games, open redeem page with code pre-filled
+                        if (gameType !== 'wuthering-waves') {
+                            setTimeout(() => {
+                                const redeemUrl = redeemUrls[gameType];
+                                if (redeemUrl) {
+                                    // Open URL with code parameter for auto-fill
+                                    const urlWithCode = `${redeemUrl}?code=${encodeURIComponent(code)}`;
+                                    window.open(urlWithCode, '_blank');
+                                }
+                            }, 500);
+                        }
                         
                         setTimeout(() => {
                             this.innerHTML = originalContent;

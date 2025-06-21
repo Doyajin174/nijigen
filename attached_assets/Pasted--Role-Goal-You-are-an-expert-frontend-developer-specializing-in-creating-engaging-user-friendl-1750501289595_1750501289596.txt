@@ -1,0 +1,63 @@
+## Role & Goal
+You are an expert frontend developer specializing in creating engaging, user-friendly interfaces with vanilla HTML, CSS, and JavaScript. Your task is to build a single-page MVP for a game redeem code website. The design should be modern, clean, and themed around a dark, gaming-centric aesthetic.
+
+## Core Requirements
+Create a single `index.html` file that includes HTML structure, CSS styles within `<style>` tags, and JavaScript logic within `<script>` tags.
+
+### 1. HTML Structure (Semantic & Accessible)
+- **Header:**
+  - A main heading `<h1>` with the title "Game Redeem Codes".
+  - A brief subheading `<p>` like "The fastest way to get the latest redeem codes."
+- **Navigation (Tabs):**
+  - A `<nav>` element containing a list of buttons (`<button>`) to switch between game categories.
+  - Each button should represent a game: "Wuthering Waves (명조)", "Honkai: Star Rail (붕괴: 스타레일)", and "Zenless Zone Zero (젠레스 존 제로)".
+  - Use ARIA roles (`role="tablist"`, `role="tab"`) for accessibility. The initially active tab should have `aria-selected="true"`.
+- **Content Area (Code Cards):**
+  - A main content section `<main>` that will display the code cards for the selected game.
+  - Create three separate `<div>` containers, one for each game, with unique IDs (e.g., `wuthering-waves-codes`, `honkai-star-rail-codes`, `zenless-zone-zero-codes`). Only the active one should be visible.
+  - Inside each game container, create several "code cards" (`<article class="code-card">`).
+  - **Each Code Card must contain:**
+    - A `div` for the code itself with a prominent style. Include the actual redeem code text (e.g., `WUTHERINGGIFT`).
+    - A "Copy" button (`<button class="copy-btn">`) next to the code. Use an icon (e.g., SVG or a unicode character like 📋) for visual appeal.
+    - A `p` tag for the description of the rewards (e.g., "Rewards: 100 Astrite, 10x Advanced Sealed Tube").
+    - A `p` tag for the expiration date (e.g., "Expires: 2025-07-31"). Use a different style for expired or soon-to-expire codes (this can be a placeholder for now).
+    - A status badge (`<span class="status-badge new">New</span>` or `<span class="status-badge expired">Expired</span>`) for quick identification.
+
+### 2. CSS Styling (Modern Dark Theme)
+- **Overall Layout:**
+  - Use a dark background color (e.g., `#121212` or a dark navy blue).
+  - Use a clean, legible font like 'Inter' or 'Poppins' from Google Fonts.
+  - Center the main content container on the page with a max-width for larger screens.
+  - Use Flexbox or Grid for layout. The page must be fully responsive.
+- **Header:**
+  - Style the `h1` with a slightly brighter color or a subtle gradient for emphasis.
+- **Navigation Tabs:**
+  - Style the buttons to look like modern tabs.
+  - The active tab should have a distinct style (e.g., different background color, bottom border).
+  - Add a smooth transition effect on hover and focus.
+- **Code Cards:**
+  - Style the cards with a slightly lighter background than the page background (e.g., `#1e1e1e`).
+  - Add `border-radius` for soft corners and a subtle `box-shadow` to make them pop.
+  - The code text should be in a monospace font for clarity.
+  - The "Copy" button should be intuitive and provide visual feedback when clicked (e.g., change text to "Copied!" for a moment).
+- **Status Badges:**
+  - "New" badge should be a vibrant color like green or blue.
+  - "Expired" badge should be a muted grey or red.
+- **Responsiveness:**
+  - On mobile devices, ensure cards stack vertically and text is readable. The navigation tabs should wrap or scroll if necessary.
+
+### 3. JavaScript Interactivity
+- **Tab Switching Logic:**
+  - When a game tab button is clicked:
+    1.  Remove the 'active' class from the currently active tab and content panel.
+    2.  Add the 'active' class to the clicked tab and its corresponding content panel.
+    3.  Update `aria-selected` attributes accordingly.
+    4.  The corresponding code container `div` should become visible, and others should be hidden (`display: none`).
+- **"Copy to Clipboard" Functionality:**
+  - When a "Copy" button is clicked:
+    1.  Get the redeem code text from the adjacent element.
+    2.  Use the `navigator.clipboard.writeText()` API to copy the code to the user's clipboard.
+    3.  Provide user feedback: briefly change the button's text or icon to "Copied!" and then revert it after 1-2 seconds.
+
+### 4. Sample Data
+Please populate the HTML with some placeholder data for each game category so the layout is clearly visible. Include at least 2-3 cards per game, with a mix of "New" and "Expired" statuses.

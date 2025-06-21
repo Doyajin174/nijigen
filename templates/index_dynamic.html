@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Redeem Codes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            font-weight: 300;
+        }
+
+        nav {
+            margin-bottom: 2.5rem;
+        }
+
+        .tab-list {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            background: rgba(30, 30, 46, 0.5);
+            padding: 0.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover {
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-button.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .tab-button:focus-visible {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .content-panel {
+            display: none;
+        }
+
+        .content-panel.active {
+            display: block;
+        }
+
+        .codes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .code-card {
+            background: rgba(30, 30, 46, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .code-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .code-card:hover::before {
+            opacity: 1;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+        }
+
+        .status-badge.new {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .status-badge.expired {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .code-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-text {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            flex: 1;
+            letter-spacing: 1px;
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        .copy-btn.copied {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .reward-text {
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .expiry-text {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .expiry-text.expired {
+            color: #f87171;
+        }
+
+        .expiry-text.expiring-soon {
+            color: #fbbf24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+
+            .tab-list {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tab-button {
+                text-align: center;
+            }
+
+            .codes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .code-section {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+            }
+
+            .copy-btn {
+                align-self: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .code-card {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Game Redeem Codes</h1>
+            <p class="subtitle">The fastest way to get the latest redeem codes</p>
+        </header>
+
+        <nav role="navigation">
+            <div class="tab-list" role="tablist">
+                <button class="tab-button active" role="tab" aria-selected="true" data-target="wuthering-waves">
+                    Wuthering Waves (명조)
+                </button>
+                <button class="tab-button" role="tab" aria-selected="false" data-target="honkai-star-rail">
+                    Honkai: Star Rail (붕괴: 스타레일)
+                </button>
+                <button class="tab-button" role="tab" aria-selected="false" data-target="zenless-zone-zero">
+                    Zenless Zone Zero (젠레스 존 제로)
+                </button>
+                <button class="tab-button" role="tab" aria-selected="false" data-target="genshin-impact">
+                    Genshin Impact (원신)
+                </button>
+            </div>
+        </nav>
+
+        <main>
+            <!-- Wuthering Waves Codes -->
+            <div id="wuthering-waves" class="content-panel active" role="tabpanel">
+                <div class="codes-grid" id="wuthering-waves-codes">
+                    <div class="loading">Loading codes...</div>
+                </div>
+            </div>
+
+            <!-- Honkai Star Rail Codes -->
+            <div id="honkai-star-rail" class="content-panel" role="tabpanel">
+                <div class="codes-grid" id="honkai-star-rail-codes">
+                    <div class="loading">Loading codes...</div>
+                </div>
+            </div>
+
+            <!-- Zenless Zone Zero Codes -->
+            <div id="zenless-zone-zero" class="content-panel" role="tabpanel">
+                <div class="codes-grid" id="zenless-zone-zero-codes">
+                    <div class="loading">Loading codes...</div>
+                </div>
+            </div>
+
+            <!-- Genshin Impact Codes -->
+            <div id="genshin-impact" class="content-panel" role="tabpanel">
+                <div class="codes-grid" id="genshin-impact-codes">
+                    <div class="loading">Loading codes...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Official redeem page URLs for each game
+        const redeemUrls = {
+            'wuthering-waves': null, // 명조는 인게임에서만 입력 가능
+            'honkai-star-rail': 'https://hsr.hoyoverse.com/gift',
+            'zenless-zone-zero': 'https://zenless.hoyoverse.com/redemption',
+            'genshin-impact': 'https://genshin.hoyoverse.com/gift'
+        };
+
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        // Function to determine expiry status
+        function getExpiryStatus(expiresAt) {
+            if (!expiresAt) return 'active';
+            
+            const now = new Date();
+            const expiry = new Date(expiresAt);
+            const daysUntilExpiry = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+            
+            if (daysUntilExpiry < 0) return 'expired';
+            if (daysUntilExpiry <= 7) return 'expiring-soon';
+            return 'active';
+        }
+
+        // Function to create a code card
+        function createCodeCard(code) {
+            const expiryStatus = getExpiryStatus(code.expires_at);
+            const statusBadge = code.status === 'expired' || expiryStatus === 'expired' ? 'expired' : 'new';
+            const expiryClass = expiryStatus === 'expired' ? 'expired' : (expiryStatus === 'expiring-soon' ? 'expiring-soon' : '');
+            const expiryText = code.expires_at ? `Expires: ${formatDate(code.expires_at)}` : 'No expiry';
+            
+            return `
+                <article class="code-card">
+                    <span class="status-badge ${statusBadge}">${statusBadge === 'expired' ? 'Expired' : 'New'}</span>
+                    <div class="code-section">
+                        <div class="code-text">${code.code}</div>
+                        <button class="copy-btn" data-code="${code.code}">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                    <p class="reward-text">Rewards: ${code.rewards}</p>
+                    <p class="expiry-text ${expiryClass}">${expiryText}</p>
+                </article>
+            `;
+        }
+
+        // Function to load codes for a specific game
+        async function loadCodes(game) {
+            const codesContainer = document.getElementById(`${game}-codes`);
+            
+            try {
+                const response = await fetch(`/api/codes/${game}`);
+                const codes = await response.json();
+                
+                if (codes.length === 0) {
+                    codesContainer.innerHTML = '<div class="loading">No codes available for this game.</div>';
+                    return;
+                }
+                
+                codesContainer.innerHTML = codes.map(createCodeCard).join('');
+                attachCopyListeners();
+                
+            } catch (error) {
+                console.error('Error loading codes:', error);
+                codesContainer.innerHTML = '<div class="loading">Error loading codes. Please try again later.</div>';
+            }
+        }
+
+        // Function to attach copy event listeners
+        function attachCopyListeners() {
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            
+            copyButtons.forEach(button => {
+                // Remove existing listeners to avoid duplicates
+                button.removeEventListener('click', handleCopyClick);
+                button.addEventListener('click', handleCopyClick);
+            });
+        }
+
+        // Copy button click handler
+        async function handleCopyClick(event) {
+            const button = event.currentTarget;
+            const code = button.getAttribute('data-code');
+            const originalContent = button.innerHTML;
+            
+            // Get current active tab to determine which redeem page to open
+            const activeTab = document.querySelector('.tab-button.active');
+            const gameType = activeTab ? activeTab.getAttribute('data-target') : 'wuthering-waves';
+            
+            try {
+                await navigator.clipboard.writeText(code);
+                
+                // Show success feedback
+                button.innerHTML = `
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                    복사완료!
+                `;
+                button.classList.add('copied');
+                
+                // For HoYoverse games, open redeem page with code pre-filled
+                if (gameType !== 'wuthering-waves') {
+                    setTimeout(() => {
+                        const redeemUrl = redeemUrls[gameType];
+                        if (redeemUrl) {
+                            // Open URL with code parameter for auto-fill
+                            const urlWithCode = `${redeemUrl}?code=${encodeURIComponent(code)}`;
+                            window.open(urlWithCode, '_blank');
+                        }
+                    }, 500);
+                }
+                
+                // Revert button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.classList.remove('copied');
+                }, 2000);
+                
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                // Show success feedback
+                button.innerHTML = `
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                    복사완료!
+                `;
+                button.classList.add('copied');
+                
+                // For HoYoverse games, open redeem page with code pre-filled
+                if (gameType !== 'wuthering-waves') {
+                    setTimeout(() => {
+                        const redeemUrl = redeemUrls[gameType];
+                        if (redeemUrl) {
+                            // Open URL with code parameter for auto-fill
+                            const urlWithCode = `${redeemUrl}?code=${encodeURIComponent(code)}`;
+                            window.open(urlWithCode, '_blank');
+                        }
+                    }, 500);
+                }
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.classList.remove('copied');
+                }, 2000);
+            }
+        }
+
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const contentPanels = document.querySelectorAll('.content-panel');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    
+                    // Remove active class from all tabs and panels
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-selected', 'false');
+                    });
+                    
+                    contentPanels.forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked tab and corresponding panel
+                    this.classList.add('active');
+                    this.setAttribute('aria-selected', 'true');
+                    
+                    const targetPanel = document.getElementById(targetId);
+                    if (targetPanel) {
+                        targetPanel.classList.add('active');
+                    }
+                    
+                    // Load codes for the selected game if not already loaded
+                    const codesContainer = document.getElementById(`${targetId}-codes`);
+                    if (codesContainer.innerHTML.includes('Loading codes...')) {
+                        loadCodes(targetId);
+                    }
+                });
+            });
+
+            // Keyboard navigation for tabs
+            tabButtons.forEach((button, index) => {
+                button.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        const direction = e.key === 'ArrowLeft' ? -1 : 1;
+                        const nextIndex = (index + direction + tabButtons.length) % tabButtons.length;
+                        tabButtons[nextIndex].focus();
+                        tabButtons[nextIndex].click();
+                    }
+                });
+            });
+
+            // Load initial codes for the active tab
+            loadCodes('wuthering-waves');
+        });
+    </script>
+</body>
+</html>

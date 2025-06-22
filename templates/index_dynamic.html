@@ -426,7 +426,7 @@
                             Copy
                         </button>
                     </div>
-                    <p class="reward-text">Rewards: ${code.rewards}</p>
+                    ${code.rewards ? `<p class="reward-text">Rewards: ${code.rewards}</p>` : ''}
                     <p class="expiry-text ${expiryClass}">${expiryText}</p>
                 </article>
             `;

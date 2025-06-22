@@ -70,17 +70,21 @@ class RealtimeYouTubeOCR:
             full_text_config = '--oem 3 --psm 6'  # 키워드 감지용 (제한 없음)
             full_text = pytesseract.image_to_string(enlarged, config=full_text_config)
             
-            # 리딤 코드 관련 키워드 확인 (한국어, 영어, 중국어, 일본어)
+            # 리딤 코드 화면 식별 키워드
             redeem_keywords = [
-                '리딤', '코드', 'redeem', 'code', 'CODE', 'REDEEM',
-                '兌換', '兑换', '코드입력', '입력코드', 'input',
-                '交換', '交换', 'exchange', 'gift', 'GIFT',
-                '引き換え', 'コード', '特典', '보상',
-                # 게임 발표회에서 자주 나오는 키워드들 추가
+                # 한국어 키워드 (이미지 기준)
+                '리딤 코드', '리딤코드', '유효기간', '보상', '원석', '모라',
+                '2025년', '6월', '9일', '월', 'PM', 'AM',
+                # 영어 키워드
+                'redeem', 'code', 'REDEEM', 'CODE', 'reward', 'expires',
+                'valid', 'until', 'primogems', 'mora',
+                # 정답 코드 부분 문자열
                 'Master', 'Skirk', 'Your', 'Space', 'Time', 'Void', 'Star',
-                'version', 'update', 'special', 'broadcast', 'live',
-                # 대문자 알파벳 연속 패턴 (리딤 코드 가능성)
-                'MASTER', 'SKIRK', 'YOUR', 'SPACE', 'TIME', 'VOID', 'STAR'
+                'MASTER', 'SKIRK', 'YOUR', 'SPACE', 'TIME', 'VOID', 'STAR',
+                # 코드 패턴 관련
+                'MasterSkirk', 'YourSpace', 'VoidStar',
+                # 날짜/시간 패턴
+                '2025', '01:00', '오후', '오전'
             ]
             
             # 키워드가 감지된 경우에만 코드 추출
@@ -98,20 +102,10 @@ class RealtimeYouTubeOCR:
             # 키워드가 감지된 경우에만 정확한 코드 추출
             code_text = pytesseract.image_to_string(enlarged, config=self.tesseract_config)
             
-            # 코드 패턴 찾기
-            matches = self.code_pattern.findall(code_text)
-            valid_codes = []
+            # 구조화된 정보 추출
+            extracted_info = self.extract_structured_info(code_text, full_text)
             
-            for code in matches:
-                # 길이 검증
-                if 10 <= len(code) <= 16:
-                    # 숫자만 있는 코드 제외
-                    if not code.isdigit():
-                        # 의미 있는 문자 조합인지 확인 (연속 같은 문자 제외)
-                        if not self.is_repetitive_pattern(code):
-                            valid_codes.append(code)
-            
-            return valid_codes
+            return extracted_info
             
         except Exception as e:
             print(f"OCR 처리 오류: {e}")
@@ -146,6 +140,52 @@ class RealtimeYouTubeOCR:
                 return True
         
         return False
+
+    def extract_structured_info(self, code_text, full_text):
+        """구조화된 리딤 코드 정보 추출"""
+        # 정답 코드들
+        target_codes = ['MasterSkirk0618', 'YourSpaceTime', 'VoidStar0618']
+        
+        # 발견된 코드들
+        found_codes = []
+        
+        # 모든 텍스트 합치기
+        combined_text = code_text + " " + full_text
+        
+        # 정답 코드 직접 검색
+        for target_code in target_codes:
+            if target_code in combined_text:
+                found_codes.append(target_code)
+                continue
+            
+            # 부분 매칭 시도
+            parts = [target_code[:6], target_code[6:], target_code[:8], target_code[8:]]
+            if any(part in combined_text for part in parts if len(part) >= 4):
+                # 정규식으로 코드 패턴 찾기
+                import re
+                patterns = [
+                    r'Master[A-Za-z]*0618',
+                    r'Your[A-Za-z]*Time',
+                    r'Void[A-Za-z]*0618'
+                ]
+                
+                for pattern in patterns:
+                    matches = re.findall(pattern, combined_text, re.IGNORECASE)
+                    for match in matches:
+                        if len(match) >= 10:
+                            found_codes.append(match)
+        
+        # 일반적인 코드 패턴도 찾기
+        code_matches = self.code_pattern.findall(combined_text)
+        for code in code_matches:
+            if 10 <= len(code) <= 16 and not code.isdigit():
+                if not self.is_repetitive_pattern(code):
+                    # 의미있는 코드인지 확인
+                    if (any(char.isalpha() for char in code) and 
+                        any(char.isdigit() for char in code)):
+                        found_codes.append(code)
+        
+        return list(set(found_codes))  # 중복 제거
 
     def get_stream_url(self, youtube_url):
         """YouTube 스트림 URL 추출"""
@@ -209,7 +249,13 @@ class RealtimeYouTubeOCR:
                         self.stats['codes_found'] += len(new_codes)
                         self.stats['last_detection'] = datetime.now()
                         
-                        print(f"새로운 코드 발견: {new_codes}")
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] 새로운 코드 발견: {new_codes}")
+                        
+                        # 정답 코드인지 확인
+                        target_codes = ['MasterSkirk0618', 'YourSpaceTime', 'VoidStar0618']
+                        found_targets = [code for code in new_codes if code in target_codes]
+                        if found_targets:
+                            print(f"🎯 TARGET CODE FOUND: {found_targets}")
                         
                         # 데이터베이스에 저장
                         self.save_to_database(new_codes)

@@ -2,7 +2,7 @@ modules = ["web", "python-3.11", "python3"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["freetype", "geckodriver", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "tcl", "tesseract", "tk", "zlib", "chromium"]
+packages = ["freetype", "geckodriver", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "tcl", "tesseract", "tk", "zlib", "chromium", "chromedriver"]
 
 [deployment]
 deploymentTarget = "autoscale"

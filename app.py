@@ -58,6 +58,165 @@ def get_codes(game):
         'created_at': code.created_at.isoformat()
     } for code in codes])
 
+@app.route('/api/manual-code', methods=['POST'])
+def add_manual_code():
+    """수동으로 코드 추가"""
+    from flask import request
+    from datetime import datetime
+    from models import RedeemCode
+    
+    data = request.get_json()
+    
+    if not data or 'code' not in data:
+        return jsonify({'error': 'Code is required'}), 400
+    
+    code = data['code'].upper().strip()
+    expiry_str = data.get('expiry')
+    rewards = data.get('rewards', '')
+    
+    # 유효기간 파싱
+    expiry_date = None
+    if expiry_str:
+        try:
+            expiry_date = datetime.strptime(expiry_str, '%Y/%m/%d %H:%M')
+        except ValueError:
+            try:
+                expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d %H:%M')
+            except ValueError:
+                pass
+    
+    # 중복 확인
+    existing = RedeemCode.query.filter_by(code=code).first()
+    if existing:
+        return jsonify({'error': 'Code already exists'}), 409
+    
+    # 새 코드 저장
+    new_code = RedeemCode(
+        game='wuthering-waves',
+        code=code,
+        rewards=rewards,
+        expires_at=expiry_date,
+        status='new'
+    )
+    db.session.add(new_code)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'code': code,
+        'message': 'Code added successfully'
+    })
+
+@app.route('/api/scrape-manual', methods=['POST'])
+def trigger_manual_scrape():
+    """수동 스크래핑 트리거"""
+    try:
+        from scrapers.myungjo_youtube_scraper import scrape_youtube_official
+        result = scrape_youtube_official()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/live-ocr/start', methods=['POST'])
+def start_live_ocr():
+    """실시간 OCR 모니터링 시작"""
+    try:
+        from live_ocr_monitor import start_live_monitoring
+        start_live_monitoring()
+        return jsonify({'success': True, 'message': 'Live OCR monitoring started'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/live-ocr/stop', methods=['POST'])
+def stop_live_ocr():
+    """실시간 OCR 모니터링 중지"""
+    try:
+        from live_ocr_monitor import stop_live_monitoring
+        stop_live_monitoring()
+        return jsonify({'success': True, 'message': 'Live OCR monitoring stopped'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/process-ocr', methods=['POST'])
+def process_ocr():
+    """브라우저에서 전송된 이미지 OCR 처리"""
+    try:
+        from flask import request
+        import base64
+        import io
+        from PIL import Image
+        import pytesseract
+        import re
+        from datetime import datetime
+        
+        data = request.get_json()
+        if not data or 'image' not in data:
+            return jsonify({'error': 'Image data required'}), 400
+        
+        # base64 이미지 디코딩
+        image_data = data['image'].split(',')[1]  # data:image/png;base64, 부분 제거
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # OCR 실행
+        text = pytesseract.image_to_string(image, config='--psm 6')
+        
+        # 코드 패턴 검색
+        code_patterns = [
+            r'\b[A-Z]{2,4}[0-9A-Z]{8,15}\b',
+            r'\b[A-Z0-9]{10,16}\b'
+        ]
+        
+        found_codes = set()
+        for pattern in code_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                if len(match) >= 8:
+                    found_codes.add(match.upper())
+        
+        # 유효기간 검색
+        date_pattern = r'(\d{4})/(\d{1,2})/(\d{1,2})\s*(\d{1,2}):(\d{2})'
+        date_match = re.search(date_pattern, text)
+        expiry = None
+        if date_match:
+            year, month, day, hour, minute = date_match.groups()
+            expiry = f"{year}/{month.zfill(2)}/{day.zfill(2)} {hour.zfill(2)}:{minute}"
+        
+        # 새로운 코드를 데이터베이스에 저장
+        new_codes = []
+        for code in found_codes:
+            existing = RedeemCode.query.filter_by(code=code).first()
+            if not existing:
+                expiry_date = None
+                if expiry:
+                    try:
+                        expiry_date = datetime.strptime(expiry, '%Y/%m/%d %H:%M')
+                    except ValueError:
+                        pass
+                
+                new_code = RedeemCode(
+                    game='wuthering-waves',
+                    code=code,
+                    rewards='',
+                    expires_at=expiry_date,
+                    status='new'
+                )
+                db.session.add(new_code)
+                new_codes.append(code)
+        
+        if new_codes:
+            db.session.commit()
+        
+        return jsonify({
+            'codes': list(found_codes),
+            'new_codes': new_codes,
+            'expiry': expiry,
+            'text': text
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/scrape/youtube')
 def manual_scrape():
     """수동으로 명조 유튜브 스크래핑 실행"""

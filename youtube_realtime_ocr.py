@@ -52,7 +52,7 @@ class RealtimeYouTubeOCR:
         return denoised
 
     def extract_codes_from_frame(self, frame):
-        """프레임에서 코드 추출"""
+        """프레임에서 코드 추출 (리딤/코드 키워드 감지 시에만)"""
         try:
             # 이미지 전처리
             processed = self.preprocess_frame(frame)
@@ -66,19 +66,72 @@ class RealtimeYouTubeOCR:
             enhancer = ImageEnhance.Contrast(enlarged)
             enhanced = enhancer.enhance(1.8)
             
-            # OCR 실행
-            text = pytesseract.image_to_string(enhanced, config=self.tesseract_config)
+            # 먼저 전체 텍스트를 추출하여 키워드 확인
+            full_text_config = '--oem 3 --psm 6'  # 키워드 감지용 (제한 없음)
+            full_text = pytesseract.image_to_string(enlarged, config=full_text_config)
+            
+            # 리딤 코드 관련 키워드 확인 (한국어, 영어, 중국어, 일본어)
+            redeem_keywords = [
+                '리딤', '코드', 'redeem', 'code', 'CODE', 'REDEEM',
+                '兌換', '兑换', '코드입력', '입력코드', 'input',
+                '交換', '交换', 'exchange', 'gift', 'GIFT',
+                '引き換え', 'コード', '特典', '보상'
+            ]
+            
+            # 키워드가 감지된 경우에만 코드 추출
+            has_redeem_keyword = any(keyword in full_text for keyword in redeem_keywords)
+            
+            if not has_redeem_keyword:
+                return []  # 키워드가 없으면 빈 리스트 반환
+            
+            print(f"리딤 코드 키워드 감지됨: {full_text[:100]}...")
+            
+            # 키워드가 감지된 경우에만 정확한 코드 추출
+            code_text = pytesseract.image_to_string(enlarged, config=self.tesseract_config)
             
             # 코드 패턴 찾기
-            matches = self.code_pattern.findall(text)
-            valid_codes = [code for code in matches 
-                          if 10 <= len(code) <= 16 and not code.isdigit()]
+            matches = self.code_pattern.findall(code_text)
+            valid_codes = []
+            
+            for code in matches:
+                # 길이 검증
+                if 10 <= len(code) <= 16:
+                    # 숫자만 있는 코드 제외
+                    if not code.isdigit():
+                        # 의미 있는 문자 조합인지 확인 (연속 같은 문자 제외)
+                        if not self.is_repetitive_pattern(code):
+                            valid_codes.append(code)
             
             return valid_codes
             
         except Exception as e:
             print(f"OCR 처리 오류: {e}")
             return []
+    
+    def is_repetitive_pattern(self, code):
+        """반복적인 패턴의 잘못된 코드인지 확인"""
+        # 같은 문자가 5개 이상 연속으로 나오는 경우
+        for i in range(len(code) - 4):
+            if len(set(code[i:i+5])) == 1:
+                return True
+        
+        # 두 문자가 번갈아가며 나오는 패턴 (예: ABABABAB)
+        if len(code) >= 8:
+            pattern = code[:2]
+            if (pattern * (len(code)//2 + 1))[:len(code)] == code:
+                return True
+        
+        # 의미없는 문자 조합 필터링
+        meaningless_patterns = [
+            'AAAAAAA', 'BBBBBBB', 'CCCCCCC', 'LLLLLLL', 'NNNNNNN', 'RRRRRRR',
+            'EEEEEEE', 'TTTTTTT', 'SSSSSSS', 'IIIIIII'
+        ]
+        
+        for pattern in meaningless_patterns:
+            if pattern[:len(code)] == code or pattern in code:
+                return True
+        
+        return False
 
     def get_stream_url(self, youtube_url):
         """YouTube 스트림 URL 추출"""
@@ -130,8 +183,8 @@ class RealtimeYouTubeOCR:
             self.latest_frame = frame
             frame_skip += 1
             
-            # 매 10프레임마다 OCR 처리 (성능 최적화)
-            if frame_skip % 10 == 0:
+            # 매 15프레임마다 OCR 처리 (성능 최적화 및 정확도 향상)
+            if frame_skip % 15 == 0:
                 self.stats['frames_processed'] += 1
                 
                 codes = self.extract_codes_from_frame(frame)

@@ -97,6 +97,8 @@ The application uses a single main entity:
 - **2025-06-22**: 실시간 라이브 화면 OCR 모니터링 시스템 구현
 - **2025-06-22**: 브라우저 확장용 OCR 스크립트 및 API 엔드포인트 추가
 - **2025-06-22**: 스크린샷에서 DTJ7CVACLBGF 코드 수동 추출 및 저장
+- **2025-06-22**: 붕괴 스타레일 유튜브 영상에서 2개 코드 추출 (HONKAISTARRAIL, ACCOUNTCENTER)
+- **2025-06-22**: 유튜브 영상 스크래핑 API 엔드포인트 추가
 
 ## User Preferences
 

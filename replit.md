@@ -100,6 +100,7 @@ The application uses a single main entity:
 - **2025-06-22**: 붕괴 스타레일 유튜브 영상에서 2개 코드 추출 (HONKAISTARRAIL, ACCOUNTCENTER)
 - **2025-06-22**: 유튜브 영상 스크래핑 API 엔드포인트 추가
 - **2025-06-22**: 브라우저 기반 실시간 라이브 OCR 모니터링 페이지 구현
+- **2025-06-22**: 로컬 컴퓨터용 독립 실행 OCR 모니터링 프로그램 개발
 
 ## User Preferences
 

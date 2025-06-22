@@ -1,0 +1,5 @@
+# 로컬 OCR 모니터링을 위한 필수 라이브러리
+opencv-python==4.8.1.78
+pytesseract==0.3.10
+Pillow==10.0.1
+numpy==1.24.3

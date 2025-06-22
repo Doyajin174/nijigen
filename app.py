@@ -109,6 +109,11 @@ def live_monitor():
     """실시간 라이브 OCR 모니터 페이지"""
     return render_template('browser_live_monitor.html')
 
+@app.route('/ocr-debug')
+def ocr_debug():
+    """OCR 프레임 디버깅 페이지"""
+    return render_template('ocr_debug.html')
+
 @app.route('/api/codes/<game>')
 def get_codes(game):
     """API endpoint to get redeem codes for a specific game"""
@@ -298,6 +303,16 @@ def manual_scrape():
             'success': False,
             'message': f'스크래핑 실패: {str(e)}'
         }), 500
+
+@app.route('/api/ocr/debug', methods=['GET'])
+def get_ocr_debug():
+    """OCR 디버깅 정보 조회"""
+    try:
+        from youtube_realtime_ocr import ocr_monitor
+        debug_info = ocr_monitor.get_debug_info()
+        return jsonify(debug_info)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -14,6 +14,8 @@ from datetime import datetime
 import yt_dlp
 import numpy as np
 from PIL import Image, ImageEnhance
+import base64
+import io
 
 class RealtimeYouTubeOCR:
     def __init__(self):
@@ -33,6 +35,14 @@ class RealtimeYouTubeOCR:
             'codes_found': 0,
             'start_time': None,
             'last_detection': None
+        }
+        
+        # 디버깅용 프레임 저장
+        self.debug_frames = {
+            'original': None,
+            'processed': None,
+            'detected_text': '',
+            'latest_codes': []
         }
 
     def preprocess_frame(self, frame):
@@ -68,8 +78,14 @@ class RealtimeYouTubeOCR:
     def extract_codes_from_frame(self, frame):
         """정답 3개 코드만 정확히 감지"""
         try:
+            # 디버깅용 원본 프레임 저장
+            self.debug_frames['original'] = self.frame_to_base64(frame)
+            
             # 이미지 전처리 - 텍스트 인식 최적화
             processed = self.preprocess_frame(frame)
+            
+            # 디버깅용 전처리된 프레임 저장
+            self.debug_frames['processed'] = self.frame_to_base64(processed)
             
             # PIL 이미지로 변환 및 확대
             pil_img = Image.fromarray(processed)
@@ -86,6 +102,9 @@ class RealtimeYouTubeOCR:
             
             # 키워드 감지용 전체 텍스트 추출
             full_text = pytesseract.image_to_string(sharpened, config='--psm 6')
+            
+            # 디버깅용 감지된 텍스트 저장
+            self.debug_frames['detected_text'] = full_text[:500]  # 처음 500자만 저장
             
             # 리딤 코드 화면 식별 키워드
             redeem_keywords = ['리딤', '코드', 'redeem', 'code', 'REDEEM', 'CODE', '원석', '모라']
@@ -140,6 +159,9 @@ class RealtimeYouTubeOCR:
                     found_codes.append('VoidStar0618')
                     print(f"🎯 TARGET CODE FOUND: VoidStar0618")
                     break
+            
+            # 디버깅용 발견된 코드 저장
+            self.debug_frames['latest_codes'] = found_codes
             
             # 정답 코드가 없으면 빈 리스트 반환
             if not found_codes:
@@ -362,6 +384,29 @@ class RealtimeYouTubeOCR:
         
         return True, "모니터링이 중지되었습니다."
 
+    def frame_to_base64(self, frame):
+        """프레임을 base64 문자열로 변환"""
+        try:
+            # OpenCV 이미지를 PIL로 변환
+            if len(frame.shape) == 3:
+                # BGR에서 RGB로 변환
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_img = Image.fromarray(frame_rgb)
+            else:
+                # 그레이스케일
+                pil_img = Image.fromarray(frame)
+            
+            # 이미지를 JPEG로 인코딩
+            buffer = io.BytesIO()
+            pil_img.save(buffer, format='JPEG', quality=80)
+            img_bytes = buffer.getvalue()
+            
+            # base64로 인코딩
+            return base64.b64encode(img_bytes).decode('utf-8')
+        except Exception as e:
+            print(f"프레임 변환 오류: {e}")
+            return None
+
     def get_status(self):
         """현재 상태 반환"""
         if not self.is_monitoring:
@@ -381,6 +426,18 @@ class RealtimeYouTubeOCR:
             'total_codes': len(self.found_codes),
             'last_detection': self.stats['last_detection'].isoformat() if self.stats['last_detection'] else None
         }
+    
+    def get_debug_info(self):
+        """디버깅 정보 반환"""
+        status = self.get_status()
+        debug_info = {
+            **status,
+            'original_frame': self.debug_frames.get('original'),
+            'processed_frame': self.debug_frames.get('processed'),
+            'detected_text': self.debug_frames.get('detected_text', ''),
+            'latest_codes': self.debug_frames.get('latest_codes', [])
+        }
+        return debug_info
 
 # 전역 OCR 인스턴스
 ocr_monitor = RealtimeYouTubeOCR()

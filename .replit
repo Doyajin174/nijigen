@@ -1,8 +1,8 @@
-modules = ["web", "python-3.11", "python3"]
+modules = ["python-3.11", "web", "nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["freetype", "geckodriver", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "tcl", "tesseract", "tk", "zlib", "chromium", "chromedriver"]
+packages = ["chromedriver", "chromium", "freetype", "geckodriver", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "postgresql", "tcl", "tesseract", "tk", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"

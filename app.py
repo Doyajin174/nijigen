@@ -44,6 +44,11 @@ def index():
     """Serve the main game redeem codes page"""
     return render_template('index_dynamic.html')
 
+@app.route('/live-monitor')
+def live_monitor():
+    """실시간 라이브 OCR 모니터 페이지"""
+    return render_template('browser_live_monitor.html')
+
 @app.route('/api/codes/<game>')
 def get_codes(game):
     """API endpoint to get redeem codes for a specific game"""

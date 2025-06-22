@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 라이브 OCR 모니터</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e1e2e, #2d2d44);
+            color: #e2e8f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #67e8f9;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        button:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        .status.monitoring {
+            color: #10b981;
+        }
+        .status.stopped {
+            color: #f87171;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .code-detected {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .instructions {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>실시간 라이브 OCR 모니터</h1>
+        
+        <div class="instructions">
+            <h3>사용 방법:</h3>
+            <ol>
+                <li>유튜브 라이브 스트림을 다른 탭에서 열어주세요</li>
+                <li>"모니터링 시작" 버튼을 클릭하세요</li>
+                <li>브라우저에서 화면 공유 권한을 허용하세요</li>
+                <li>코드가 화면에 나타나면 자동으로 감지됩니다</li>
+            </ol>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" onclick="startMonitoring()">모니터링 시작</button>
+            <button id="stopBtn" onclick="stopMonitoring()" disabled>모니터링 중지</button>
+            <button onclick="clearLog()">로그 지우기</button>
+        </div>
+
+        <div class="status" id="status">대기 중</div>
+
+        <div class="log" id="log">
+            <div>OCR 모니터링 준비 완료</div>
+            <div>화면 공유를 시작하여 라이브 스트림을 모니터링하세요</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script>
+        let isMonitoring = false;
+        let mediaStream = null;
+        let videoElement = null;
+        let canvas = null;
+        let ctx = null;
+        let detectedCodes = new Set();
+        let monitorInterval = null;
+
+        // OCR 워커 초기화
+        let worker = null;
+
+        async function initOCR() {
+            if (!worker) {
+                addLog('OCR 엔진 초기화 중...');
+                worker = await Tesseract.createWorker('eng', 1, {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            console.log(`OCR 진행률: ${Math.round(m.progress * 100)}%`);
+                        }
+                    }
+                });
+                await worker.setParameters({
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
+                });
+                addLog('OCR 엔진 초기화 완료');
+            }
+        }
+
+        async function startMonitoring() {
+            try {
+                addLog('화면 공유 요청 중...');
+                
+                // 화면 공유 시작
+                mediaStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        mediaSource: 'screen',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                });
+
+                // 비디오 엘리먼트 생성
+                videoElement = document.createElement('video');
+                videoElement.srcObject = mediaStream;
+                videoElement.play();
+
+                // 캔버스 생성
+                canvas = document.createElement('canvas');
+                ctx = canvas.getContext('2d');
+
+                addLog('화면 공유 시작됨');
+                addLog('OCR 모니터링 시작...');
+
+                isMonitoring = true;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('status').textContent = '모니터링 중';
+                document.getElementById('status').className = 'status monitoring';
+
+                // OCR 초기화
+                await initOCR();
+
+                // 모니터링 시작 (3초마다)
+                monitorInterval = setInterval(analyzeScreen, 3000);
+
+            } catch (error) {
+                addLog(`오류: ${error.message}`);
+                console.error('화면 공유 오류:', error);
+            }
+        }
+
+        function stopMonitoring() {
+            isMonitoring = false;
+            
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+                monitorInterval = null;
+            }
+
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('status').textContent = '중지됨';
+            document.getElementById('status').className = 'status stopped';
+
+            addLog('모니터링 중지됨');
+        }
+
+        async function analyzeScreen() {
+            if (!isMonitoring || !videoElement || !worker) return;
+
+            try {
+                // 비디오 프레임을 캔버스에 그리기
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                
+                if (canvas.width === 0 || canvas.height === 0) return;
+
+                ctx.drawImage(videoElement, 0, 0);
+
+                // 하단 영역만 추출 (코드가 주로 하단에 표시됨)
+                const bottomHeight = Math.floor(canvas.height * 0.3);
+                const bottomY = canvas.height - bottomHeight;
+                
+                const bottomRegion = ctx.getImageData(0, bottomY, canvas.width, bottomHeight);
+                
+                // 새 캔버스에 하단 영역만 그리기
+                const regionCanvas = document.createElement('canvas');
+                regionCanvas.width = canvas.width;
+                regionCanvas.height = bottomHeight;
+                const regionCtx = regionCanvas.getContext('2d');
+                regionCtx.putImageData(bottomRegion, 0, 0);
+
+                // OCR 실행
+                const { data: { text } } = await worker.recognize(regionCanvas);
+                
+                if (text.trim()) {
+                    console.log('OCR 결과:', text);
+                    findCodesInText(text);
+                }
+
+            } catch (error) {
+                console.error('화면 분석 오류:', error);
+            }
+        }
+
+        function findCodesInText(text) {
+            const cleanText = text.toUpperCase().replace(/[^A-Z0-9\s]/g, '');
+            
+            // 코드 패턴들
+            const patterns = [
+                /\b[A-Z]{3}[A-Z0-9]{9}\b/g,     // 12자리 패턴
+                /\b[A-Z0-9]{10,16}\b/g,         // 10-16자리
+                /\b[A-Z]{2,4}[0-9][A-Z0-9]{7,11}\b/g // 숫자 포함 패턴
+            ];
+
+            let foundCodes = [];
+            patterns.forEach(pattern => {
+                const matches = cleanText.match(pattern) || [];
+                foundCodes = foundCodes.concat(matches);
+            });
+
+            // 중복 제거 및 필터링
+            foundCodes = [...new Set(foundCodes)].filter(code => {
+                const excluded = ['YOUTUBE', 'STREAM', 'CHANNEL', 'HONKAI', 'WUTHERING'];
+                return !excluded.some(word => code.includes(word)) && code.length >= 8;
+            });
+
+            foundCodes.forEach(code => {
+                if (!detectedCodes.has(code)) {
+                    detectedCodes.add(code);
+                    onCodeDetected(code);
+                }
+            });
+        }
+
+        async function onCodeDetected(code) {
+            const time = new Date().toLocaleTimeString();
+            addLog(`🎉 새 코드 발견: ${code} (${time})`, 'code-detected');
+            
+            // 브라우저 알림
+            if (Notification.permission === 'granted') {
+                new Notification('새 리딤코드 발견!', {
+                    body: `코드: ${code}`,
+                    icon: '/favicon.ico'
+                });
+            }
+
+            // 서버에 코드 전송
+            try {
+                const response = await fetch('/api/manual-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        rewards: '',
+                        expiry: null
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    addLog(`✅ 서버에 저장됨: ${code}`);
+                } else {
+                    addLog(`⚠️ 서버 저장 실패: ${result.error || '알 수 없는 오류'}`);
+                }
+            } catch (error) {
+                addLog(`❌ 서버 통신 오류: ${error.message}`);
+            }
+        }
+
+        function addLog(message, className = '') {
+            const log = document.getElementById('log');
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (className) div.className = className;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // 알림 권한 요청
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // 페이지 언로드 시 정리
+        window.addEventListener('beforeunload', () => {
+            if (isMonitoring) {
+                stopMonitoring();
+            }
+            if (worker) {
+                worker.terminate();
+            }
+        });
+    </script>
+</body>
+</html>

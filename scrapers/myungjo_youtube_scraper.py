@@ -268,7 +268,7 @@ def scrape_youtube_official():
         expiry = code_obj['expiry']
         comment_info = code_obj['commentInfo']
         reward_text = code_obj.get('reward_text')
-        rewards_field = reward_text if reward_text else f"(공식 채널 {comment_info['author']}의 {comment_info['type']} 댓글에서 추출)"
+        rewards_field = reward_text if reward_text else ""
         if not RedeemCode.query.filter_by(code=code).first():
             rc = RedeemCode(
                 game='wuthering-waves',
@@ -293,7 +293,7 @@ def save_code_to_db(code, comment):
     rc = RedeemCode(
         game='wuthering-waves',
         code=code,
-        rewards='(유튜브 공식 채널 댓글에서 추출)',
+        rewards='',
         expires_at=None,
         status='new'
     )
@@ -320,7 +320,7 @@ def run_scraper():
             rc = RedeemCode(
                 game='wuthering-waves',
                 code=code,
-                rewards='(유튜브 공식 채널 댓글에서 추출)',
+                rewards='',
                 expires_at=expiry,
                 status='new'
             )

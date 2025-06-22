@@ -30,6 +30,14 @@ with app.app_context():
     # Make sure to import the models here or their tables won't be created
     import models  # noqa: F401
     db.create_all()
+    
+    # 스케줄러 시작 (백그라운드에서 매시간 스크래핑)
+    try:
+        from scheduler import start_scheduler
+        start_scheduler()
+        print("명조 유튜브 스크래퍼 스케줄러가 시작되었습니다.")
+    except Exception as e:
+        print(f"스케줄러 시작 실패: {e}")
 
 @app.route('/')
 def index():
@@ -49,6 +57,23 @@ def get_codes(game):
         'status': code.status,
         'created_at': code.created_at.isoformat()
     } for code in codes])
+
+@app.route('/api/scrape/youtube')
+def manual_scrape():
+    """수동으로 명조 유튜브 스크래핑 실행"""
+    try:
+        from scrapers.myungjo_youtube_scraper import scrape_youtube_official
+        result = scrape_youtube_official()
+        return jsonify({
+            'success': True,
+            'message': f'스크래핑 완료: {result["total"]}개 코드 발견, {result["newCodes"]}개 새로 저장',
+            'data': result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'스크래핑 실패: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

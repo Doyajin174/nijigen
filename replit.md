@@ -87,15 +87,16 @@ The application uses a single main entity:
 - Session security with environment-based secret key
 - Proxy headers properly handled for deployment environment
 
-## Changelog
+## Recent Changes
 
-```
-Changelog:
-- June 22, 2025. Initial setup
-```
+- **2025-06-22**: 프로젝트를 Replit 환경으로 성공적으로 마이그레이션
+- **2025-06-22**: PostgreSQL 데이터베이스 설정 및 연결 완료  
+- **2025-06-22**: 명조 유튜브 스크래퍼 테스트 성공 (3개 리딤코드 추출)
+- **2025-06-22**: 매시간 자동 스크래핑 스케줄러 구현 및 활성화
+- **2025-06-22**: 수동 스크래핑을 위한 API 엔드포인트 추가
 
 ## User Preferences
 
-```
-Preferred communication style: Simple, everyday language.
-```
+- **언어**: 한국어 사용
+- **소통 스타일**: 간단명료한 일상 언어  
+- **기능 우선순위**: 명조 유튜브 스크래핑 기능을 중시

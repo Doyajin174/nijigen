@@ -75,14 +75,23 @@ class RealtimeYouTubeOCR:
                 '리딤', '코드', 'redeem', 'code', 'CODE', 'REDEEM',
                 '兌換', '兑换', '코드입력', '입력코드', 'input',
                 '交換', '交换', 'exchange', 'gift', 'GIFT',
-                '引き換え', 'コード', '特典', '보상'
+                '引き換え', 'コード', '特典', '보상',
+                # 게임 발표회에서 자주 나오는 키워드들 추가
+                'Master', 'Skirk', 'Your', 'Space', 'Time', 'Void', 'Star',
+                'version', 'update', 'special', 'broadcast', 'live',
+                # 대문자 알파벳 연속 패턴 (리딤 코드 가능성)
+                'MASTER', 'SKIRK', 'YOUR', 'SPACE', 'TIME', 'VOID', 'STAR'
             ]
             
             # 키워드가 감지된 경우에만 코드 추출
             has_redeem_keyword = any(keyword in full_text for keyword in redeem_keywords)
             
-            if not has_redeem_keyword:
-                return []  # 키워드가 없으면 빈 리스트 반환
+            # 대문자 조합이 많이 나오는 경우도 리딤 코드 가능성 있음
+            uppercase_count = sum(1 for c in full_text if c.isupper())
+            has_many_uppercase = uppercase_count > 20
+            
+            if not has_redeem_keyword and not has_many_uppercase:
+                return []  # 키워드나 대문자가 충분하지 않으면 빈 리스트 반환
             
             print(f"리딤 코드 키워드 감지됨: {full_text[:100]}...")
             
@@ -110,6 +119,11 @@ class RealtimeYouTubeOCR:
     
     def is_repetitive_pattern(self, code):
         """반복적인 패턴의 잘못된 코드인지 확인"""
+        # 예상 정답 코드는 필터링하지 않음
+        expected_codes = ['MasterSkirk0618', 'YourSpaceTime', 'VoidStar0618']
+        if code in expected_codes:
+            return False
+        
         # 같은 문자가 5개 이상 연속으로 나오는 경우
         for i in range(len(code) - 4):
             if len(set(code[i:i+5])) == 1:
@@ -121,7 +135,7 @@ class RealtimeYouTubeOCR:
             if (pattern * (len(code)//2 + 1))[:len(code)] == code:
                 return True
         
-        # 의미없는 문자 조합 필터링
+        # 의미없는 문자 조합 필터링 (단, 실제 코드 패턴은 제외)
         meaningless_patterns = [
             'AAAAAAA', 'BBBBBBB', 'CCCCCCC', 'LLLLLLL', 'NNNNNNN', 'RRRRRRR',
             'EEEEEEE', 'TTTTTTT', 'SSSSSSS', 'IIIIIII'

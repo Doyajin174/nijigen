@@ -38,6 +38,14 @@ with app.app_context():
         print("명조 유튜브 스크래퍼 스케줄러가 시작되었습니다.")
     except Exception as e:
         print(f"스케줄러 시작 실패: {e}")
+    
+    # 자동 라이브 모니터링 시작
+    try:
+        from live_stream_monitor import start_auto_monitoring
+        start_auto_monitoring()
+        print("자동 라이브 스트림 모니터링이 시작되었습니다.")
+    except Exception as e:
+        print(f"자동 모니터링 시작 실패: {e}")
 
 @app.route('/')
 def index():

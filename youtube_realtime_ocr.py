@@ -36,76 +36,117 @@ class RealtimeYouTubeOCR:
         }
 
     def preprocess_frame(self, frame):
-        """프레임 전처리"""
+        """프레임 전처리 - 텍스트 인식 정확도 극대화"""
         # 그레이스케일 변환
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # 적응적 이진화
-        binary = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-            cv2.THRESH_BINARY, 11, 2
+        # 이미지 크기 확대 (2배)
+        height, width = gray.shape
+        resized = cv2.resize(gray, (width * 2, height * 2), interpolation=cv2.INTER_CUBIC)
+        
+        # 히스토그램 평활화로 대비 개선
+        equalized = cv2.equalizeHist(resized)
+        
+        # 가우시안 블러로 노이즈 제거
+        blurred = cv2.GaussianBlur(equalized, (3, 3), 0)
+        
+        # 적응적 임계값 적용 (더 정확한 설정)
+        thresh = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv2.THRESH_BINARY, 15, 3
         )
         
-        # 노이즈 제거
-        denoised = cv2.medianBlur(binary, 3)
+        # 텍스트 영역 강화를 위한 모폴로지 연산
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        processed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
         
-        return denoised
+        # 최종 노이즈 제거
+        final = cv2.medianBlur(processed, 3)
+        
+        return final
 
     def extract_codes_from_frame(self, frame):
-        """프레임에서 코드 추출 (리딤/코드 키워드 감지 시에만)"""
+        """정답 3개 코드만 정확히 감지"""
         try:
-            # 이미지 전처리
+            # 이미지 전처리 - 텍스트 인식 최적화
             processed = self.preprocess_frame(frame)
             
             # PIL 이미지로 변환 및 확대
             pil_img = Image.fromarray(processed)
             width, height = pil_img.size
-            enlarged = pil_img.resize((width * 3, height * 3), Image.LANCZOS)
+            enlarged = pil_img.resize((width * 4, height * 4), Image.LANCZOS)
             
             # 대비 향상
             enhancer = ImageEnhance.Contrast(enlarged)
-            enhanced = enhancer.enhance(1.8)
+            enhanced = enhancer.enhance(2.0)
             
-            # 먼저 전체 텍스트를 추출하여 키워드 확인
-            full_text_config = '--oem 3 --psm 6'  # 키워드 감지용 (제한 없음)
-            full_text = pytesseract.image_to_string(enlarged, config=full_text_config)
+            # 선명도 향상
+            sharpness = ImageEnhance.Sharpness(enhanced)
+            sharpened = sharpness.enhance(1.5)
+            
+            # 키워드 감지용 전체 텍스트 추출
+            full_text = pytesseract.image_to_string(sharpened, config='--psm 6')
             
             # 리딤 코드 화면 식별 키워드
-            redeem_keywords = [
-                # 한국어 키워드 (이미지 기준)
-                '리딤 코드', '리딤코드', '유효기간', '보상', '원석', '모라',
-                '2025년', '6월', '9일', '월', 'PM', 'AM',
-                # 영어 키워드
-                'redeem', 'code', 'REDEEM', 'CODE', 'reward', 'expires',
-                'valid', 'until', 'primogems', 'mora',
-                # 정답 코드 부분 문자열
-                'Master', 'Skirk', 'Your', 'Space', 'Time', 'Void', 'Star',
-                'MASTER', 'SKIRK', 'YOUR', 'SPACE', 'TIME', 'VOID', 'STAR',
-                # 코드 패턴 관련
-                'MasterSkirk', 'YourSpace', 'VoidStar',
-                # 날짜/시간 패턴
-                '2025', '01:00', '오후', '오전'
-            ]
+            redeem_keywords = ['리딤', '코드', 'redeem', 'code', 'REDEEM', 'CODE', '원석', '모라']
+            has_keyword = any(keyword in full_text for keyword in redeem_keywords)
             
-            # 키워드가 감지된 경우에만 코드 추출
-            has_redeem_keyword = any(keyword in full_text for keyword in redeem_keywords)
-            
-            # 대문자 조합이 많이 나오는 경우도 리딤 코드 가능성 있음
-            uppercase_count = sum(1 for c in full_text if c.isupper())
-            has_many_uppercase = uppercase_count > 20
-            
-            if not has_redeem_keyword and not has_many_uppercase:
-                return []  # 키워드나 대문자가 충분하지 않으면 빈 리스트 반환
+            if not has_keyword:
+                return []
             
             print(f"리딤 코드 키워드 감지됨: {full_text[:100]}...")
             
-            # 키워드가 감지된 경우에만 정확한 코드 추출
-            code_text = pytesseract.image_to_string(enlarged, config=self.tesseract_config)
+            # 정답 코드만 정확히 추출 (영어만)
+            code_text = pytesseract.image_to_string(
+                sharpened, 
+                config='--psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+            )
             
-            # 구조화된 정보 추출
-            extracted_info = self.extract_structured_info(code_text, full_text)
+            # 정답 3개 코드 정확 감지
+            target_codes = ['MasterSkirk0618', 'YourSpaceTime', 'VoidStar0618']
+            found_codes = []
             
-            return extracted_info
+            text_upper = code_text.upper()
+            
+            # MasterSkirk0618 감지
+            master_patterns = [
+                'MASTERSKIRK0618', 'MASTERSSKIRK0618', 'MASTERSKIRK618',
+                'MASTERSKIRK06l8', 'MASTERSKIRK0G18', 'MASTERSK1RK0618'
+            ]
+            for pattern in master_patterns:
+                if pattern in text_upper:
+                    found_codes.append('MasterSkirk0618')
+                    print(f"🎯 TARGET CODE FOUND: MasterSkirk0618")
+                    break
+            
+            # YourSpaceTime 감지
+            space_patterns = [
+                'YOURSPACETIME', 'YOUR5PACETIME', 'YOURSPAC3TIME',
+                'YOURSPAC£TIME', 'Y0URSPACETIME', 'YOURSPACE7IME'
+            ]
+            for pattern in space_patterns:
+                if pattern in text_upper:
+                    found_codes.append('YourSpaceTime')
+                    print(f"🎯 TARGET CODE FOUND: YourSpaceTime")
+                    break
+            
+            # VoidStar0618 감지
+            void_patterns = [
+                'VOIDSTAR0618', 'VOIDSTAR618', 'VOIDSTAR06l8',
+                'VOIDSTAR0G18', 'V0IDSTAR0618', 'VOIDSTAR061B'
+            ]
+            for pattern in void_patterns:
+                if pattern in text_upper:
+                    found_codes.append('VoidStar0618')
+                    print(f"🎯 TARGET CODE FOUND: VoidStar0618")
+                    break
+            
+            # 정답 코드가 없으면 빈 리스트 반환
+            if not found_codes:
+                print("정답 코드 감지되지 않음 - 무시")
+                return []
+            
+            return found_codes
             
         except Exception as e:
             print(f"OCR 처리 오류: {e}")

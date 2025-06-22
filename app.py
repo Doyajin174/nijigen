@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -51,6 +51,58 @@ with app.app_context():
 def index():
     """Serve the main game redeem codes page"""
     return render_template('index_dynamic.html')
+
+# YouTube OCR 모니터링 API 엔드포인트
+@app.route('/api/ocr/start', methods=['POST'])
+def start_ocr_monitoring():
+    """OCR 모니터링 시작"""
+    try:
+        data = request.get_json()
+        youtube_url = data.get('url', '').strip()
+        
+        if not youtube_url:
+            return jsonify({'success': False, 'message': 'YouTube URL이 필요합니다.'})
+        
+        # URL 유효성 검사
+        if 'youtube.com' not in youtube_url and 'youtu.be' not in youtube_url:
+            return jsonify({'success': False, 'message': '유효한 YouTube URL을 입력하세요.'})
+        
+        from youtube_realtime_ocr import ocr_monitor
+        success, message = ocr_monitor.start_monitoring(youtube_url)
+        
+        return jsonify({'success': success, 'message': message})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'오류: {str(e)}'})
+
+@app.route('/api/ocr/stop', methods=['POST'])
+def stop_ocr_monitoring():
+    """OCR 모니터링 중지"""
+    try:
+        from youtube_realtime_ocr import ocr_monitor
+        success, message = ocr_monitor.stop_monitoring()
+        
+        return jsonify({'success': success, 'message': message})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'오류: {str(e)}'})
+
+@app.route('/api/ocr/status')
+def get_ocr_status():
+    """OCR 모니터링 상태 조회"""
+    try:
+        from youtube_realtime_ocr import ocr_monitor
+        status = ocr_monitor.get_status()
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'오류: {str(e)}'})
+
+@app.route('/ocr-monitor')
+def ocr_monitor_page():
+    """OCR 모니터링 페이지"""
+    return render_template('ocr_monitor.html')
 
 @app.route('/live-monitor')
 def live_monitor():

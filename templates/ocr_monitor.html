@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 YouTube OCR 모니터</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a35;
+            --bg-tertiary: #25254a;
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8d8;
+            --accent-blue: #4f9eff;
+            --accent-green: #00c851;
+            --accent-red: #ff4757;
+            --accent-yellow: #ffc107;
+            --border-color: #3a3a5c;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .control-panel {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(79, 158, 255, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3d8bff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(79, 158, 255, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e63946;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 71, 87, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status-panel {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-running {
+            background: rgba(0, 200, 81, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .status-stopped {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .codes-panel {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .codes-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .code-item {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .code-text {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--accent-green);
+            font-size: 1.1rem;
+            flex: 1;
+        }
+
+        .copy-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .copy-btn:hover {
+            background: #3d8bff;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-success {
+            background: rgba(0, 200, 81, 0.1);
+            border-left-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .alert-error {
+            background: rgba(255, 71, 87, 0.1);
+            border-left-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .alert-info {
+            background: rgba(79, 158, 255, 0.1);
+            border-left-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-link">
+            <a href="/" class="btn btn-secondary">
+                ← 메인으로 돌아가기
+            </a>
+        </div>
+
+        <div class="header">
+            <h1>실시간 YouTube OCR 모니터</h1>
+            <p>YouTube 라이브 스트림에서 실시간으로 리딤 코드를 감지합니다</p>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="control-panel">
+            <h3 style="margin-bottom: 1.5rem;">모니터링 제어</h3>
+            
+            <div class="form-group">
+                <label for="youtube-url">YouTube URL</label>
+                <input type="url" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." 
+                       value="https://www.youtube.com/watch?v=oNnLByYSzHw">
+            </div>
+
+            <div class="btn-group">
+                <button id="start-btn" class="btn btn-primary">
+                    ▶ 모니터링 시작
+                </button>
+                <button id="stop-btn" class="btn btn-danger" disabled>
+                    ⏹ 모니터링 중지
+                </button>
+                <button id="refresh-btn" class="btn btn-secondary">
+                    🔄 상태 새로고침
+                </button>
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <h3 style="margin-bottom: 1rem;">모니터링 상태</h3>
+            
+            <div id="status-indicator" class="status-indicator status-stopped">
+                <div class="status-dot"></div>
+                <span>중지됨</span>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div id="runtime" class="stat-value">0초</div>
+                    <div class="stat-label">실행 시간</div>
+                </div>
+                <div class="stat-item">
+                    <div id="frames-processed" class="stat-value">0</div>
+                    <div class="stat-label">처리된 프레임</div>
+                </div>
+                <div class="stat-item">
+                    <div id="codes-found" class="stat-value">0</div>
+                    <div class="stat-label">발견된 코드</div>
+                </div>
+                <div class="stat-item">
+                    <div id="last-detection" class="stat-value">-</div>
+                    <div class="stat-label">마지막 감지</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="codes-panel">
+            <h3 style="margin-bottom: 1rem;">감지된 리딤 코드</h3>
+            
+            <div id="codes-list" class="codes-list">
+                <div class="empty-state">
+                    아직 감지된 코드가 없습니다. 모니터링을 시작하세요.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let monitoringInterval;
+        let isMonitoring = false;
+
+        // DOM 요소
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const urlInput = document.getElementById('youtube-url');
+        const statusIndicator = document.getElementById('status-indicator');
+        const alertsContainer = document.getElementById('alerts');
+        
+        // 통계 요소
+        const runtimeEl = document.getElementById('runtime');
+        const framesEl = document.getElementById('frames-processed');
+        const codesFoundEl = document.getElementById('codes-found');
+        const lastDetectionEl = document.getElementById('last-detection');
+        const codesListEl = document.getElementById('codes-list');
+
+        // 이벤트 리스너
+        startBtn.addEventListener('click', startMonitoring);
+        stopBtn.addEventListener('click', stopMonitoring);
+        refreshBtn.addEventListener('click', updateStatus);
+
+        // 알림 표시
+        function showAlert(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertsContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // 모니터링 시작
+        async function startMonitoring() {
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showAlert('YouTube URL을 입력하세요.', 'error');
+                return;
+            }
+
+            try {
+                startBtn.disabled = true;
+                
+                const response = await fetch('/api/ocr/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    isMonitoring = true;
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    urlInput.disabled = true;
+                    
+                    showAlert(result.message, 'success');
+                    
+                    // 상태 업데이트 시작
+                    monitoringInterval = setInterval(updateStatus, 2000);
+                    updateStatus();
+                } else {
+                    showAlert(result.message, 'error');
+                    startBtn.disabled = false;
+                }
+            } catch (error) {
+                showAlert('모니터링 시작 중 오류가 발생했습니다.', 'error');
+                startBtn.disabled = false;
+            }
+        }
+
+        // 모니터링 중지
+        async function stopMonitoring() {
+            try {
+                stopBtn.disabled = true;
+                
+                const response = await fetch('/api/ocr/stop', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    isMonitoring = false;
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    urlInput.disabled = false;
+                    
+                    showAlert(result.message, 'success');
+                    
+                    // 상태 업데이트 중지
+                    clearInterval(monitoringInterval);
+                    updateStatus();
+                } else {
+                    showAlert(result.message, 'error');
+                    stopBtn.disabled = false;
+                }
+            } catch (error) {
+                showAlert('모니터링 중지 중 오류가 발생했습니다.', 'error');
+                stopBtn.disabled = false;
+            }
+        }
+
+        // 상태 업데이트
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/ocr/status');
+                const status = await response.json();
+                
+                // 상태 인디케이터 업데이트
+                if (status.status === 'running') {
+                    statusIndicator.className = 'status-indicator status-running';
+                    statusIndicator.innerHTML = '<div class="status-dot"></div><span>실행 중</span>';
+                } else {
+                    statusIndicator.className = 'status-indicator status-stopped';
+                    statusIndicator.innerHTML = '<div class="status-dot"></div><span>중지됨</span>';
+                }
+                
+                // 통계 업데이트
+                if (status.status === 'running') {
+                    runtimeEl.textContent = formatTime(status.runtime_seconds);
+                    framesEl.textContent = status.frames_processed || 0;
+                    codesFoundEl.textContent = status.total_codes || 0;
+                    lastDetectionEl.textContent = status.last_detection ? 
+                        new Date(status.last_detection).toLocaleTimeString() : '-';
+                    
+                    // 코드 목록 업데이트
+                    updateCodesList(status.codes_found || []);
+                } else {
+                    runtimeEl.textContent = '0초';
+                    framesEl.textContent = '0';
+                    codesFoundEl.textContent = '0';
+                    lastDetectionEl.textContent = '-';
+                }
+            } catch (error) {
+                console.error('상태 업데이트 실패:', error);
+            }
+        }
+
+        // 코드 목록 업데이트
+        function updateCodesList(codes) {
+            if (codes.length === 0) {
+                codesListEl.innerHTML = '<div class="empty-state">아직 감지된 코드가 없습니다.</div>';
+                return;
+            }
+
+            codesListEl.innerHTML = codes.map(code => `
+                <div class="code-item">
+                    <div class="code-text">${code}</div>
+                    <button class="copy-btn" onclick="copyCode('${code}')">복사</button>
+                </div>
+            `).join('');
+        }
+
+        // 코드 복사
+        function copyCode(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                showAlert(`코드 "${code}" 복사됨`, 'success');
+            }).catch(() => {
+                showAlert('복사에 실패했습니다.', 'error');
+            });
+        }
+
+        // 시간 포맷팅
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}시간 ${minutes}분 ${secs}초`;
+            } else if (minutes > 0) {
+                return `${minutes}분 ${secs}초`;
+            } else {
+                return `${secs}초`;
+            }
+        }
+
+        // 페이지 로드 시 상태 확인
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus();
+        });
+    </script>
+</body>
+</html>
